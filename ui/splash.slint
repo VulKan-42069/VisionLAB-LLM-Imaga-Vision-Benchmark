@@ -1,0 +1,54 @@
+import { Theme, Metrics } from "theme.slint";
+import { Api } from "api.slint";
+import { ProgressIndicator } from "std-widgets.slint";
+
+export component SplashView inherits Rectangle {
+    background: Theme.colors.background-primary;
+    opacity: Api.splash-opacity;
+    animate opacity { duration: 250ms; easing: ease-out; }
+
+    VerticalLayout {
+        alignment: center;
+        spacing: 20px;
+        padding: 40px;
+
+        Image {
+            source: @image-url("../assets/app-icon.png");
+            width: 88px;
+            height: 88px;
+            image-fit: contain;
+        }
+
+        Text {
+            text: "LLM Vision Benchmark Studio";
+            color: Theme.colors.text-secondary;
+            font-size: 13px;
+            horizontal-alignment: center;
+        }
+
+        Rectangle {
+            height: 16px;
+        }
+
+        Text {
+            text: Api.splash-status;
+            color: Theme.colors.text-tertiary;
+            font-size: 12px;
+            horizontal-alignment: center;
+        }
+
+        ProgressIndicator {
+            width: 280px;
+            height: 6px;
+            progress: Api.splash-progress;
+            indeterminate: Api.splash-progress <= 0;
+        }
+
+        Text {
+            text: "v" + Api.app-version;
+            color: Theme.colors.text-tertiary;
+            font-size: 11px;
+            horizontal-alignment: center;
+        }
+    }
+}

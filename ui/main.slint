@@ -1,0 +1,222 @@
+import { Theme, Metrics } from "theme.slint";
+import { Api, LegendItem, ScoreboardRow, ProviderRow, ModelRow } from "api.slint";
+import { AppButton, IconButton, Pill, NavTab, BtnKind } from "widgets.slint";
+import { Palette } from "std-widgets.slint";
+import { SplashView } from "splash.slint";
+import { StudioView } from "studio.slint";
+import { CompareView } from "compare.slint";
+import { ScoreboardView } from "scoreboard.slint";
+import { SettingsView } from "settings.slint";
+import { ConfirmOverlay, ErrorOverlay, ToastView } from "dialogs.slint";
+
+export { Theme, Api, LegendItem, ScoreboardRow, ProviderRow, ModelRow, Palette }
+
+export component MainWindow inherits Window {
+    title: "VisionLab - LLM Vision Benchmark Studio";
+    icon: @image-url("../assets/app-icon-win.png");
+    preferred-width: 1440px;
+    preferred-height: 920px;
+    min-width: 1100px;
+    min-height: 720px;
+    default-font-family: "Segoe UI";
+    background: Theme.colors.background-primary;
+
+    property <bool> theme-dark: Api.is-dark;
+    changed theme-dark => {
+        Palette.color-scheme = theme-dark ? ColorScheme.dark : ColorScheme.light;
+        Theme.is-dark = theme-dark;
+    }
+
+    init => {
+        Theme.is-dark = Api.is-dark;
+        Palette.color-scheme = Api.is-dark ? ColorScheme.dark : ColorScheme.light;
+    }
+
+    MenuBar {
+        Menu {
+            title: "File";
+            MenuItem {
+                title: "Open Image";
+                shortcut: @keys(Control + O);
+                activated => { Api.open-image(); }
+            }
+            MenuItem {
+                title: "Open Video";
+                shortcut: @keys(Control + Shift + O);
+                activated => { Api.open-video(); }
+            }
+            MenuSeparator {}
+            MenuItem {
+                title: "Export Result";
+                activated => { Api.export-result(); }
+            }
+        }
+        Menu {
+            title: "View";
+            MenuItem { title: "Test Studio"; activated => { Api.goto-screen(1); } }
+            MenuItem { title: "Compare"; activated => { Api.goto-screen(4); } }
+            MenuItem { title: "Scoreboard"; activated => { Api.goto-screen(2); } }
+            MenuItem {
+                title: "Settings";
+                shortcut: @keys(Control + Comma);
+                activated => { Api.goto-screen(3); }
+            }
+            MenuSeparator {}
+            MenuItem { title: "Toggle Theme"; activated => { Api.toggle-theme(); } }
+        }
+        Menu {
+            title: "Run";
+            MenuItem {
+                title: "Run Test";
+                shortcut: @keys(Control + Return);
+                activated => { Api.run-test(); }
+            }
+            MenuItem { title: "Pass"; activated => { Api.grade-pass(); } }
+            MenuItem { title: "Fail"; activated => { Api.grade-fail(); } }
+        }
+    }
+
+    keys := FocusScope {
+        width: 100%;
+        height: 100%;
+
+        key-pressed(event) => {
+            if event.text == Key.Escape {
+                if Api.error-open {
+                    Api.error-dismiss();
+                    return EventResult.accept;
+                }
+                if Api.confirm-open {
+                    Api.confirm-cancel();
+                    return EventResult.accept;
+                }
+            }
+            if event.modifiers.control && event.text == Key.Return {
+                Api.run-test();
+                return EventResult.accept;
+            }
+            if event.modifiers.control && event.modifiers.shift && event.text == "o" {
+                Api.open-video();
+                return EventResult.accept;
+            }
+            if event.modifiers.control && event.text == "o" {
+                Api.open-image();
+                return EventResult.accept;
+            }
+            if event.modifiers.control && event.text == "," {
+                Api.goto-screen(3);
+                return EventResult.accept;
+            }
+            if event.modifiers.control && event.text == "1" { Api.select-task(0); return EventResult.accept; }
+            if event.modifiers.control && event.text == "2" { Api.select-task(1); return EventResult.accept; }
+            if event.modifiers.control && event.text == "3" { Api.select-task(2); return EventResult.accept; }
+            if event.modifiers.control && event.text == "4" { Api.select-task(3); return EventResult.accept; }
+            if event.modifiers.control && event.text == "5" { Api.select-task(4); return EventResult.accept; }
+            if event.text == " " && Api.is-video && !Api.error-open && !Api.confirm-open {
+                Api.video-play-toggle();
+                return EventResult.accept;
+            }
+            return EventResult.reject;
+        }
+
+        VerticalLayout {
+            Rectangle {
+                height: Metrics.chrome-h;
+                background: Theme.colors.surface-primary;
+                VerticalLayout {
+                    HorizontalLayout {
+                        padding-left: 16px;
+                        padding-right: 12px;
+                        padding-top: 8px;
+                        padding-bottom: 8px;
+                        spacing: 8px;
+
+                        Image {
+                            source: @image-url("../assets/app-icon.png");
+                            width: 30px;
+                            height: 30px;
+                            image-fit: contain;
+                            vertical-alignment: center;
+                        }
+
+                        Rectangle { width: 8px; }
+
+                        NavTab { text: "Studio"; active: Api.screen == 1; clicked => { Api.goto-screen(1); } }
+                        NavTab { text: "Compare"; active: Api.screen == 4; clicked => { Api.goto-screen(4); } }
+                        NavTab { text: "Scoreboard"; active: Api.screen == 2; clicked => { Api.goto-screen(2); } }
+                        NavTab { text: "Settings"; active: Api.screen == 3; clicked => { Api.goto-screen(3); } }
+
+                        Rectangle { horizontal-stretch: 1; }
+
+                        if Api.latency-text != "": Pill { text: Api.latency-text; tone: Theme.colors.status-info; }
+                        if Api.cost-text != "": Pill { text: Api.cost-text; tone: Theme.colors.accent-primary; }
+
+                        IconButton {
+                            icon: Api.is-dark ? @image-url("../assets/sun.svg") : @image-url("../assets/moon.svg");
+                            clicked => { Api.toggle-theme(); }
+                        }
+                    }
+                    Rectangle { height: 1px; background: Theme.colors.border-primary; }
+                }
+            }
+
+            Rectangle {
+                vertical-stretch: 1;
+                StudioView {
+                    x: 0px;
+                    y: 0px;
+                    width: 100%;
+                    height: 100%;
+                    visible: Api.screen == 1;
+                }
+                CompareView {
+                    x: 0px;
+                    y: 0px;
+                    width: 100%;
+                    height: 100%;
+                    visible: Api.screen == 4;
+                }
+                ScoreboardView {
+                    x: 0px;
+                    y: 0px;
+                    width: 100%;
+                    height: 100%;
+                    visible: Api.screen == 2;
+                }
+                SettingsView {
+                    x: 0px;
+                    y: 0px;
+                    width: 100%;
+                    height: 100%;
+                    visible: Api.screen == 3;
+                }
+            }
+        }
+    }
+
+    if Api.splash-visible: SplashView {
+        x: 0px;
+        y: 0px;
+        width: 100%;
+        height: 100%;
+    }
+
+    if Api.confirm-open: ConfirmOverlay {
+        x: 0px;
+        y: 0px;
+        width: 100%;
+        height: 100%;
+    }
+
+    if Api.error-open: ErrorOverlay {
+        x: 0px;
+        y: 0px;
+        width: 100%;
+        height: 100%;
+    }
+
+    if Api.toast-visible: ToastView {
+        x: root.width - 340px;
+        y: root.height - 80px;
+    }
+}

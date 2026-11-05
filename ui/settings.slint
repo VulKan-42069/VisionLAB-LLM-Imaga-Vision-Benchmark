@@ -1,0 +1,498 @@
+import { Theme, Metrics } from "theme.slint";
+import { Api, ProviderRow, ModelRow } from "api.slint";
+import { AppButton, SectionLabel, BtnKind, Pill, QuietPill, EmptyState, FieldHint } from "widgets.slint";
+import { ComboBox, LineEdit, ScrollView, Switch, TextEdit, SpinBox } from "std-widgets.slint";
+
+component SideItem inherits Rectangle {
+    in property <string> text;
+    in property <bool> active;
+    callback clicked;
+    height: 40px;
+    border-radius: Metrics.r-sm;
+    background: active ? Theme.colors.accent-muted : (touch.has-hover ? Theme.colors.surface-hover : transparent);
+
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        Text {
+            text: root.text;
+            color: active ? Theme.colors.accent-primary : Theme.colors.text-secondary;
+            font-size: 13px;
+            font-weight: active ? 600 : 500;
+            vertical-alignment: center;
+        }
+    }
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+        mouse-cursor: pointer;
+    }
+}
+
+component ProviderCard inherits Rectangle {
+    in property <ProviderRow> entry;
+    in property <bool> active;
+    callback clicked;
+    height: 68px;
+    border-radius: Metrics.r-md;
+    background: active ? Theme.colors.accent-muted : Theme.colors.surface-secondary;
+    border-width: 1px;
+    border-color: active ? Theme.colors.accent-primary : Theme.colors.border-primary;
+
+    HorizontalLayout {
+        padding: 12px;
+        spacing: 10px;
+        VerticalLayout {
+            spacing: 3px;
+            alignment: center;
+            Text { text: entry.name; color: Theme.colors.text-primary; font-size: 13px; font-weight: 600; overflow: elide; }
+            Text {
+                text: entry.model == "" ? entry.kind + " · No default model" : entry.kind + " · " + entry.model;
+                color: Theme.colors.text-tertiary;
+                font-size: 11px;
+                overflow: elide;
+            }
+        }
+        Rectangle { horizontal-stretch: 1; }
+        VerticalLayout {
+            alignment: center;
+            horizontal-stretch: 0;
+            QuietPill {
+                text: entry.status;
+                ok: entry.has-key;
+            }
+        }
+    }
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+        mouse-cursor: pointer;
+    }
+}
+
+component FieldLabel inherits Text {
+    in property <string> caption;
+    text: caption;
+    color: Theme.colors.text-secondary;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+export component SettingsView inherits Rectangle {
+    background: transparent;
+
+    HorizontalLayout {
+        padding: 16px;
+        spacing: 16px;
+
+        Rectangle {
+            width: 200px;
+            background: Theme.colors.surface-primary;
+            border-radius: Metrics.r-lg;
+            border-width: 1px;
+            border-color: Theme.colors.border-primary;
+
+            VerticalLayout {
+                padding: 12px;
+                spacing: 4px;
+                alignment: start;
+                SectionLabel { caption: "Settings"; }
+                Rectangle { height: 8px; }
+                SideItem { text: "Providers"; active: Api.settings-section == 0; clicked => { Api.settings-section-changed(0); } }
+                SideItem { text: "Models"; active: Api.settings-section == 1; clicked => { Api.settings-section-changed(1); } }
+                SideItem { text: "General"; active: Api.settings-section == 2; clicked => { Api.settings-section-changed(2); } }
+                SideItem { text: "Media"; active: Api.settings-section == 3; clicked => { Api.settings-section-changed(3); } }
+                SideItem { text: "Run defaults"; active: Api.settings-section == 4; clicked => { Api.settings-section-changed(4); } }
+                SideItem { text: "Data"; active: Api.settings-section == 5; clicked => { Api.settings-section-changed(5); } }
+                SideItem { text: "About"; active: Api.settings-section == 6; clicked => { Api.settings-section-changed(6); } }
+            }
+        }
+
+        Rectangle {
+            background: Theme.colors.surface-primary;
+            border-radius: Metrics.r-lg;
+            border-width: 1px;
+            border-color: Theme.colors.border-primary;
+            horizontal-stretch: 1;
+
+            if Api.settings-section == 0: HorizontalLayout {
+                padding: 16px;
+                spacing: 16px;
+
+                VerticalLayout {
+                    width: 280px;
+                    spacing: 8px;
+                    HorizontalLayout {
+                        SectionLabel { caption: "Providers"; }
+                        Rectangle { horizontal-stretch: 1; }
+                        AppButton {
+                            text: "Add";
+                            icon: @image-url("../assets/plus.svg");
+                            kind: BtnKind.primary;
+                            clicked => { Api.settings-add-provider(); }
+                        }
+                    }
+                    ScrollView {
+                        vertical-stretch: 1;
+                        VerticalLayout {
+                            spacing: 8px;
+                            alignment: start;
+                            for p[i] in Api.providers: ProviderCard {
+                                entry: p;
+                                active: Api.selected-provider == i;
+                                clicked => { Api.settings-select-provider(i); }
+                            }
+                            if Api.providers.length == 0: Text {
+                                text: "No providers yet.";
+                                color: Theme.colors.text-tertiary;
+                            }
+                        }
+                    }
+                }
+
+                Rectangle { width: 1px; background: Theme.colors.border-primary; }
+
+                if Api.selected-provider < 0: VerticalLayout {
+                    horizontal-stretch: 1;
+                    alignment: center;
+                    EmptyState {
+                        title: "No provider selected";
+                        body: "Select a provider on the left, or add one to get started.";
+                    }
+                }
+
+                if Api.selected-provider >= 0: ScrollView {
+                    horizontal-stretch: 1;
+                    VerticalLayout {
+                        padding: 8px;
+                        spacing: 16px;
+                        alignment: start;
+
+                        VerticalLayout {
+                            spacing: 6px;
+                            FieldLabel { caption: "Name"; }
+                            LineEdit {
+                                text <=> Api.edit-name;
+                                placeholder-text: "Display name";
+                                edited(t) => { Api.settings-field-changed(); }
+                            }
+                        }
+                        VerticalLayout {
+                            spacing: 6px;
+                            FieldLabel { caption: "Kind"; }
+                            ComboBox {
+                                model: ["OpenAI", "Anthropic", "OpenRouter", "Ollama", "Custom"];
+                                current-index <=> Api.edit-kind;
+                                selected(v) => { Api.settings-kind-changed(self.current-index); }
+                            }
+                        }
+                        VerticalLayout {
+                            spacing: 6px;
+                            FieldLabel { caption: "Base URL"; }
+                            LineEdit {
+                                text <=> Api.edit-base-url;
+                                placeholder-text: Api.edit-kind == 3 ? "http://localhost:11434" : "https://api.example.com/v1";
+                                edited(t) => { Api.settings-field-changed(); }
+                            }
+                            if Api.edit-kind == 3: FieldHint {
+                                caption: "Local Ollama server. No /v1 suffix. Default is http://localhost:11434.";
+                            }
+                        }
+                        VerticalLayout {
+                            spacing: 6px;
+                            FieldLabel { caption: "API key"; }
+                            FieldHint {
+                                caption: Api.edit-kind == 3
+                                    ? "No key needed for local Ollama. Optional if the host sits behind a proxy."
+                                    : "Stored in Windows Credential Manager, not in config.json.";
+                            }
+                            LineEdit {
+                                text <=> Api.edit-api-key;
+                                placeholder-text: Api.edit-kind == 3 ? "Optional" : "Paste API key";
+                                input-type: InputType.password;
+                                edited(t) => { Api.settings-field-changed(); }
+                            }
+                        }
+                        VerticalLayout {
+                            spacing: 6px;
+                            FieldLabel { caption: "Default model"; }
+                            LineEdit {
+                                text <=> Api.edit-default-model;
+                                placeholder-text: Api.edit-kind == 3 ? "llama3.2-vision" : "gpt-4o";
+                                edited(t) => { Api.settings-field-changed(); }
+                            }
+                        }
+                        if Api.edit-kind == 4: VerticalLayout {
+                            spacing: 6px;
+                            FieldLabel { caption: "Extra headers"; }
+                            FieldHint { caption: "JSON object. Custom providers only."; }
+                            TextEdit {
+                                text <=> Api.edit-headers;
+                                wrap: word-wrap;
+                                height: 96px;
+                                edited(t) => { Api.settings-field-changed(); }
+                            }
+                        }
+                        if Api.connection-status != "": Text {
+                            text: Api.connection-status;
+                            color: Api.connection-ok ? Theme.colors.status-pass : Theme.colors.status-fail;
+                            font-size: 12px;
+                            wrap: word-wrap;
+                        }
+                        HorizontalLayout {
+                            spacing: 8px;
+                            AppButton { text: "Test connection"; clicked => { Api.settings-test-connection(); } }
+                            AppButton { text: "Save"; kind: BtnKind.primary; clicked => { Api.settings-save(); } }
+                            Rectangle { horizontal-stretch: 1; }
+                            AppButton { text: "Delete"; kind: BtnKind.danger; clicked => { Api.settings-delete-provider(); } }
+                        }
+                    }
+                }
+            }
+
+            if Api.settings-section == 1: VerticalLayout {
+                padding: 16px;
+                spacing: 10px;
+                HorizontalLayout {
+                    SectionLabel { caption: "Model catalog"; }
+                    Rectangle { horizontal-stretch: 1; }
+                    AppButton { text: "Refresh catalog"; clicked => { Api.settings-refresh-models(); } }
+                    AppButton { text: "Probe vision"; clicked => { Api.settings-probe-vision(); } }
+                }
+                Text {
+                    text: "Select a provider first. Vision-capable models can be used in Test Studio.";
+                    color: Theme.colors.text-tertiary;
+                    font-size: 12px;
+                }
+                ScrollView {
+                    vertical-stretch: 1;
+                    VerticalLayout {
+                        padding-right: 10px;
+                        spacing: 6px;
+                        alignment: start;
+                        for m[i] in Api.models: Rectangle {
+                            height: 48px;
+                            border-radius: Metrics.r-sm;
+                            background: Theme.colors.surface-secondary;
+                            clip: true;
+                            HorizontalLayout {
+                                padding-left: 12px;
+                                padding-right: 10px;
+                                spacing: 10px;
+                                Text {
+                                    text: m.name;
+                                    color: Theme.colors.text-primary;
+                                    font-size: 13px;
+                                    vertical-alignment: center;
+                                    horizontal-stretch: 1;
+                                    overflow: elide;
+                                }
+                                VerticalLayout {
+                                    width: 96px;
+                                    alignment: center;
+                                    horizontal-stretch: 0;
+                                    vertical-stretch: 0;
+                                    Pill {
+                                        text: m.vision-label;
+                                        min-w: 96px;
+                                        tone: m.vision-ok ? Theme.colors.status-pass : Theme.colors.status-warning;
+                                    }
+                                }
+                                VerticalLayout {
+                                    alignment: center;
+                                    horizontal-stretch: 0;
+                                    vertical-stretch: 0;
+                                    AppButton {
+                                        text: "Use";
+                                        min-w: 64px;
+                                        clicked => { Api.settings-select-model(i); }
+                                    }
+                                }
+                            }
+                        }
+                        if Api.models.length == 0: Text {
+                            text: "No models loaded. Test the connection or refresh the catalog. For Ollama, start ollama serve first.";
+                            color: Theme.colors.text-tertiary;
+                        }
+                    }
+                }
+            }
+
+            if Api.settings-section == 2: VerticalLayout {
+                padding: 20px;
+                spacing: 14px;
+                alignment: start;
+                SectionLabel { caption: "Appearance"; }
+                FieldLabel { caption: "Theme"; }
+                ComboBox {
+                    width: 240px;
+                    model: ["Light", "Dark", "Follow system"];
+                    current-index <=> Api.theme-mode;
+                    selected(v) => { Api.settings-theme-mode(self.current-index); }
+                }
+                Text {
+                    text: "Accent follows Windows when possible. The in-app palette stays violet-blue otherwise.";
+                    color: Theme.colors.text-tertiary;
+                    font-size: 12px;
+                    wrap: word-wrap;
+                }
+                HorizontalLayout {
+                    spacing: 10px;
+                    Switch {
+                        checked <=> Api.restore-session;
+                        toggled => { Api.settings-restore-session(self.checked); }
+                    }
+                    Text {
+                        text: "Restore last screen on startup";
+                        color: Theme.colors.text-primary;
+                        font-size: 13px;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+
+            if Api.settings-section == 3: VerticalLayout {
+                padding: 20px;
+                spacing: 12px;
+                alignment: start;
+                SectionLabel { caption: "Media"; }
+                FieldLabel { caption: "Preview FPS"; }
+                SpinBox {
+                    width: 160px;
+                    minimum: 5;
+                    maximum: 60;
+                    value <=> Api.preview-fps;
+                    edited(v) => { Api.settings-field-changed(); }
+                }
+                FieldLabel { caption: "Frame step"; }
+                SpinBox {
+                    width: 160px;
+                    minimum: 1;
+                    maximum: 60;
+                    value <=> Api.frame-step;
+                    edited(v) => { Api.settings-field-changed(); }
+                }
+                FieldLabel { caption: "Max image dimension before downscale"; }
+                SpinBox {
+                    width: 160px;
+                    minimum: 256;
+                    maximum: 4096;
+                    value <=> Api.max-dim;
+                    edited(v) => { Api.settings-field-changed(); }
+                }
+                AppButton { text: "Save media settings"; kind: BtnKind.primary; clicked => { Api.settings-save(); } }
+            }
+
+            if Api.settings-section == 4: VerticalLayout {
+                padding: 20px;
+                spacing: 12px;
+                alignment: start;
+                SectionLabel { caption: "Run defaults"; }
+                FieldLabel { caption: "Request timeout (seconds)"; }
+                SpinBox {
+                    width: 160px;
+                    minimum: 10;
+                    maximum: 300;
+                    value <=> Api.timeout-secs;
+                    edited(v) => { Api.settings-field-changed(); }
+                }
+                FieldLabel { caption: "Retries"; }
+                SpinBox {
+                    width: 160px;
+                    minimum: 0;
+                    maximum: 5;
+                    value <=> Api.retries;
+                    edited(v) => { Api.settings-field-changed(); }
+                }
+                FieldLabel { caption: "Max tokens"; }
+                FieldHint { caption: "Cap on the model's reply. Sent to OpenAI, OpenRouter, Anthropic, and Ollama. Default 6144. Raise this if detection JSON gets cut off."; }
+                SpinBox {
+                    width: 160px;
+                    minimum: 256;
+                    maximum: 16000;
+                    value <=> Api.max-tokens;
+                    edited(v) => { Api.settings-field-changed(); }
+                }
+                FieldLabel { caption: "Temperature"; }
+                FieldHint { caption: "0.0 to 2.0 in steps of 0.1. Use 0 for deterministic grading."; }
+                SpinBox {
+                    width: 160px;
+                    minimum: 0;
+                    maximum: 20;
+                    value: Math.round(Api.temperature * 10);
+                    edited(v) => { Api.temperature = v / 10.0; Api.settings-field-changed(); }
+                }
+                HorizontalLayout {
+                    spacing: 10px;
+                    Switch {
+                        checked <=> Api.warn-huge;
+                        toggled => { Api.settings-field-changed(); }
+                    }
+                    Text { text: "Warn before sending huge images"; color: Theme.colors.text-primary; font-size: 13px; vertical-alignment: center; }
+                }
+                AppButton { text: "Save run defaults"; kind: BtnKind.primary; clicked => { Api.settings-save(); } }
+            }
+
+            if Api.settings-section == 5: VerticalLayout {
+                padding: 20px;
+                spacing: 12px;
+                alignment: start;
+                SectionLabel { caption: "Data"; }
+                FieldLabel { caption: "Data directory"; }
+                Text {
+                    text: Api.data-dir;
+                    color: Theme.colors.text-secondary;
+                    font-size: 12px;
+                    wrap: word-wrap;
+                    font-family: "Cascadia Mono";
+                }
+                HorizontalLayout {
+                    spacing: 8px;
+                    AppButton { text: "Open folder"; clicked => { Api.open-data-dir(); } }
+                    AppButton { text: "Export config"; clicked => { Api.export-config(); } }
+                    AppButton { text: "Import config"; clicked => { Api.import-config(); } }
+                }
+                HorizontalLayout {
+                    spacing: 8px;
+                    AppButton { text: "Backup scoreboard"; clicked => { Api.backup-scoreboard(); } }
+                    AppButton { text: "Restore scoreboard"; clicked => { Api.restore-scoreboard(); } }
+                }
+                Text {
+                    text: Api.ffmpeg-status;
+                    color: Theme.colors.text-secondary;
+                    font-size: 12px;
+                    wrap: word-wrap;
+                }
+            }
+
+            if Api.settings-section == 6: VerticalLayout {
+                padding: 24px;
+                spacing: 12px;
+                alignment: start;
+                SectionLabel { caption: "About"; }
+                Text {
+                    text: "VisionLab  v" + Api.app-version;
+                    color: Theme.colors.text-primary;
+                    font-size: 18px;
+                    font-weight: 700;
+                }
+                Text {
+                    text: "A native Windows studio for probing vision-capable language models.\nClassification, detection, segmentation, keypoints, and OCR.";
+                    color: Theme.colors.text-secondary;
+                    font-size: 13px;
+                    wrap: word-wrap;
+                }
+                Text {
+                    text: Api.about-text;
+                    color: Theme.colors.text-tertiary;
+                    font-size: 12px;
+                    wrap: word-wrap;
+                }
+                Text {
+                    text: "UI built with Slint. Slint is used under the royalty-free desktop license with attribution.";
+                    color: Theme.colors.text-tertiary;
+                    font-size: 12px;
+                    wrap: word-wrap;
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,197 @@
+// Shared data types and the Api global that Rust drives.
+
+export struct LegendItem {
+    label: string,
+    count: int,
+    color: color,
+}
+
+export struct ScoreboardRow {
+    id: string,
+    time: string,
+    provider: string,
+    model: string,
+    task: string,
+    media: string,
+    latency: string,
+    tokens: string,
+    cost: string,
+    verdict: string,
+    notes: string,
+}
+
+export struct ProviderRow {
+    id: string,
+    name: string,
+    kind: string,
+    model: string,
+    has-key: bool,
+    status: string,
+}
+
+export struct ModelRow {
+    id: string,
+    name: string,
+    vision-label: string,
+    vision-ok: bool,
+}
+
+export global Api {
+    // 0 splash placeholder, 1 studio, 2 scoreboard, 3 settings, 4 compare
+    in-out property <int> screen: 1;
+    in-out property <string> app-version: "0.1.0";
+
+    in-out property <bool> splash-visible: true;
+    in-out property <float> splash-opacity: 1.0;
+    in-out property <string> splash-status: "Starting...";
+    in-out property <float> splash-progress: 0.0;
+
+    in-out property <bool> is-dark: true;
+    in-out property <int> theme-mode: 1;
+
+    in-out property <image> canvas-image;
+    in-out property <image> original-image;
+    in-out property <bool> has-media: false;
+    in-out property <bool> is-video: false;
+    in-out property <bool> is-running: false;
+    in-out property <bool> has-result: false;
+    in-out property <string> media-label: "";
+    in-out property <string> media-meta: "";
+    in-out property <string> downscale-notice: "";
+
+    in-out property <[string]> model-names;
+    in-out property <int> model-index: -1;
+    in-out property <string> selected-model: "Select model";
+    in-out property <bool> model-vision-ok: false;
+    in-out property <string> model-vision-label: "";
+
+    in-out property <[string]> task-names: [
+        "Classification",
+        "Object detection",
+        "Instance segmentation",
+        "Keypoint detection",
+        "OCR",
+    ];
+    in-out property <int> task-index: 1;
+    in-out property <string> focus-prompt: "";
+
+    in-out property <string> cost-text: "";
+    in-out property <string> latency-text: "";
+    in-out property <string> tokens-text: "";
+    in-out property <string> raw-json: "";
+    in-out property <bool> raw-json-clipped: false;
+    in-out property <string> notes-text: "";
+    in-out property <string> result-summary: "Run a test to see results";
+    in-out property <[LegendItem]> legend;
+    in-out property <bool> grade-enabled: false;
+    in-out property <string> last-verdict: "";
+
+    in-out property <bool> show-connect-banner: true;
+    in-out property <bool> run-enabled: false;
+
+    in-out property <bool> video-playing: false;
+    in-out property <float> video-position: 0.0;
+    in-out property <string> video-time: "0:00 / 0:00";
+    in-out property <string> video-frame: "Frame 0 / 0";
+
+    in-out property <[ScoreboardRow]> scoreboard-rows;
+    in-out property <int> stat-runs: 0;
+    in-out property <string> stat-pass-rate: "n/a";
+    in-out property <string> stat-avg-latency: "n/a";
+    in-out property <string> stat-total-cost: "n/a";
+    in-out property <string> scoreboard-filter: "";
+    in-out property <int> scoreboard-task-filter: 0;
+
+    in-out property <[ProviderRow]> providers;
+    in-out property <[ModelRow]> models;
+    in-out property <int> settings-section: 0;
+    in-out property <int> selected-provider: -1;
+    in-out property <string> edit-name: "";
+    in-out property <int> edit-kind: 0;
+    in-out property <string> edit-base-url: "";
+    in-out property <string> edit-api-key: "";
+    in-out property <string> edit-default-model: "";
+    in-out property <string> edit-headers: "{}";
+    in-out property <string> connection-status: "";
+    in-out property <bool> connection-ok: false;
+    in-out property <bool> settings-dirty: false;
+
+    in-out property <int> preview-fps: 20;
+    in-out property <int> frame-step: 1;
+    in-out property <int> max-dim: 1536;
+    in-out property <int> timeout-secs: 90;
+    in-out property <int> retries: 2;
+    in-out property <float> temperature: 0.0;
+    in-out property <int> max-tokens: 6144;
+    in-out property <bool> warn-huge: true;
+    in-out property <bool> restore-session: true;
+    in-out property <string> data-dir: "";
+    in-out property <string> ffmpeg-status: "";
+    in-out property <string> about-text: "";
+
+    in-out property <bool> confirm-open: false;
+    in-out property <string> confirm-title: "";
+    in-out property <string> confirm-message: "";
+    in-out property <string> confirm-detail: "";
+    in-out property <string> confirm-action: "Confirm";
+    in-out property <bool> confirm-danger: false;
+
+    in-out property <bool> error-open: false;
+    in-out property <string> error-title: "";
+    in-out property <string> error-message: "";
+    in-out property <string> error-detail: "";
+    in-out property <string> error-action: "OK";
+
+    in-out property <bool> toast-visible: false;
+    in-out property <string> toast-text: "";
+
+    callback open-image();
+    callback open-video();
+    callback run-test();
+    callback retry-test();
+    callback export-result();
+    callback copy-json();
+    callback clear-result();
+    callback grade-pass();
+    callback grade-fail();
+    callback select-task(int);
+    callback select-model(int);
+    callback toggle-theme();
+    callback goto-screen(int);
+    callback notes-changed(string);
+
+    callback video-play-toggle();
+    callback video-stop();
+    callback video-seek(float);
+    callback video-step(int);
+
+    callback confirm-ok();
+    callback confirm-cancel();
+    callback error-dismiss();
+    callback toast-dismiss();
+
+    callback settings-section-changed(int);
+    callback settings-add-provider();
+    callback settings-delete-provider();
+    callback settings-select-provider(int);
+    callback settings-kind-changed(int);
+    callback settings-test-connection();
+    callback settings-save();
+    callback settings-refresh-models();
+    callback settings-probe-vision();
+    callback settings-select-model(int);
+    callback settings-field-changed();
+    callback settings-theme-mode(int);
+    callback settings-restore-session(bool);
+    callback scoreboard-export-csv();
+    callback scoreboard-export-json();
+    callback scoreboard-clear();
+    callback scoreboard-open-row(int);
+    callback scoreboard-filter-changed(string);
+    callback scoreboard-task-filter-changed(int);
+    callback import-config();
+    callback export-config();
+    callback backup-scoreboard();
+    callback restore-scoreboard();
+    callback open-data-dir();
+}

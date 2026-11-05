@@ -1,0 +1,16 @@
+VisionLab
+LLM Vision Benchmark Studio
+
+Copyright (c) 2026 Amir
+
+This installer ships the VisionLab desktop application.
+
+The user interface is built with Slint (https://slint.dev/), used under the
+Slint royalty-free license for proprietary desktop applications, with
+attribution.
+
+API keys are never included in this installer. VisionLab stores keys in
+Windows Credential Manager after you paste them in Settings.
+
+Video features use ffmpeg when it is on PATH, or the app may download a
+local ffmpeg binary on first use.

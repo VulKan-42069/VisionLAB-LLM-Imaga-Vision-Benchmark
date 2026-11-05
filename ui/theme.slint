@@ -1,0 +1,141 @@
+// VisionLab design tokens. Light and dark palettes share the same structure
+// so screens never hard-code colors.
+
+export struct ThemeColors {
+    background-primary: color,
+    background-secondary: color,
+    background-tertiary: color,
+    background-overlay: color,
+
+    surface-primary: color,
+    surface-secondary: color,
+    surface-hover: color,
+    surface-active: color,
+
+    border-primary: color,
+    border-secondary: color,
+    border-focus: color,
+
+    text-primary: color,
+    text-secondary: color,
+    text-tertiary: color,
+    text-inverse: color,
+    on-accent: color,
+
+    accent-primary: color,
+    accent-secondary: color,
+    accent-hover: color,
+    accent-active: color,
+    accent-muted: color,
+
+    status-pass: color,
+    status-fail: color,
+    status-warning: color,
+    status-info: color,
+
+    annotation-1: color,
+    annotation-2: color,
+    annotation-3: color,
+    annotation-4: color,
+    annotation-5: color,
+    annotation-6: color,
+    annotation-7: color,
+    annotation-8: color,
+}
+
+export global Theme {
+    in property <ThemeColors> light: {
+        background-primary: #f3f0f7,
+        background-secondary: #ebe6f2,
+        background-tertiary: #ddd6e8,
+        background-overlay: rgba(24, 18, 36, 0.48),
+
+        surface-primary: #ffffff,
+        surface-secondary: #f6f3fb,
+        surface-hover: #eee8f6,
+        surface-active: #e4dcf0,
+
+        border-primary: #d9d1e4,
+        border-secondary: #c8bdd6,
+        border-focus: #7c3aed,
+
+        text-primary: #1a1524,
+        text-secondary: #4f475e,
+        text-tertiary: #716885,
+        text-inverse: #ffffff,
+        on-accent: #ffffff,
+
+        accent-primary: #6d28d9,
+        accent-secondary: #8b5cf6,
+        accent-hover: #5b21b6,
+        accent-active: #4c1d95,
+        accent-muted: rgba(109, 40, 217, 0.12),
+
+        status-pass: #15803d,
+        status-fail: #dc2626,
+        status-warning: #b45309,
+        status-info: #1d4ed8,
+
+        annotation-1: #7c3aed,
+        annotation-2: #2563eb,
+        annotation-3: #059669,
+        annotation-4: #d97706,
+        annotation-5: #dc2626,
+        annotation-6: #db2777,
+        annotation-7: #0891b2,
+        annotation-8: #65a30d,
+    };
+
+    in property <ThemeColors> dark: {
+        background-primary: #0b0a0f,
+        background-secondary: #12111a,
+        background-tertiary: #1c1a24,
+        background-overlay: rgba(0, 0, 0, 0.64),
+
+        surface-primary: #16151e,
+        surface-secondary: #1d1b26,
+        surface-hover: #2a2734,
+        surface-active: #353140,
+
+        border-primary: #3a3648,
+        border-secondary: #4a4558,
+        border-focus: #a78bfa,
+
+        text-primary: #f5f2fb,
+        text-secondary: #b7aec8,
+        text-tertiary: #8d849e,
+        text-inverse: #0b0a0f,
+        on-accent: #ffffff,
+
+        accent-primary: #8b5cf6,
+        accent-secondary: #c4b5fd,
+        accent-hover: #7c3aed,
+        accent-active: #6d28d9,
+        accent-muted: rgba(139, 92, 246, 0.18),
+
+        status-pass: #4ade80,
+        status-fail: #f87171,
+        status-warning: #fbbf24,
+        status-info: #7dd3fc,
+
+        annotation-1: #a78bfa,
+        annotation-2: #60a5fa,
+        annotation-3: #34d399,
+        annotation-4: #fbbf24,
+        annotation-5: #f87171,
+        annotation-6: #f472b6,
+        annotation-7: #22d3ee,
+        annotation-8: #a3e635,
+    };
+
+    in-out property <bool> is-dark: true;
+    out property <ThemeColors> colors: is-dark ? dark : light;
+}
+
+export global Metrics {
+    out property <length> r-sm: 10px;
+    out property <length> r-md: 12px;
+    out property <length> r-lg: 16px;
+    out property <length> control-h: 36px;
+    out property <length> chrome-h: 52px;
+}

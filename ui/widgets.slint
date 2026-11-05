@@ -1,0 +1,794 @@
+import { Theme, Metrics } from "theme.slint";
+import { LegendItem } from "api.slint";
+import { ScrollView } from "std-widgets.slint";
+
+export enum BtnKind {
+    primary,
+    secondary,
+    ghost,
+    danger,
+    success,
+}
+
+export component AppButton inherits Rectangle {
+    in property <string> text;
+    in property <image> icon;
+    in property <BtnKind> kind: BtnKind.secondary;
+    in property <bool> enabled: true;
+    in property <length> min-w: 0px;
+    callback clicked;
+
+    height: Metrics.control-h;
+    min-width: max(min-w, content.min-width);
+    border-radius: Metrics.r-sm;
+    horizontal-stretch: 0;
+    vertical-stretch: 0;
+
+    property <bool> has-icon: icon.width > 0;
+    property <bool> live: enabled && (touch.has-hover || touch.pressed);
+
+    property <color> fg: !enabled ? Theme.colors.text-tertiary
+        : kind == BtnKind.primary ? Theme.colors.on-accent
+        : kind == BtnKind.danger ? Theme.colors.status-fail
+        : kind == BtnKind.success ? Theme.colors.status-pass
+        : Theme.colors.text-primary;
+
+    property <brush> fill: !enabled ? Theme.colors.surface-secondary
+        : kind == BtnKind.primary && touch.pressed ? @linear-gradient(180deg, Theme.colors.accent-active 0%, Theme.colors.accent-primary 100%)
+        : kind == BtnKind.primary && touch.has-hover ? @linear-gradient(180deg, Theme.colors.accent-secondary 0%, Theme.colors.accent-hover 100%)
+        : kind == BtnKind.primary ? @linear-gradient(180deg, Theme.colors.accent-hover 0%, Theme.colors.accent-primary 100%)
+        : kind == BtnKind.danger && touch.has-hover ? Theme.colors.status-fail.transparentize(0.78)
+        : kind == BtnKind.danger ? Theme.colors.status-fail.transparentize(0.88)
+        : kind == BtnKind.success && touch.has-hover ? Theme.colors.status-pass.transparentize(0.78)
+        : kind == BtnKind.success ? Theme.colors.status-pass.transparentize(0.88)
+        : kind == BtnKind.ghost && touch.has-hover ? Theme.colors.surface-hover
+        : kind == BtnKind.ghost ? transparent
+        : touch.pressed ? Theme.colors.surface-active
+        : touch.has-hover ? Theme.colors.surface-hover
+        : Theme.colors.surface-secondary;
+
+    property <color> stroke: !enabled ? Theme.colors.border-primary
+        : kind == BtnKind.primary ? Theme.colors.accent-active.transparentize(0.25)
+        : kind == BtnKind.danger ? Theme.colors.status-fail.transparentize(0.35)
+        : kind == BtnKind.success ? Theme.colors.status-pass.transparentize(0.35)
+        : kind == BtnKind.ghost ? transparent
+        : live ? Theme.colors.border-secondary : Theme.colors.border-primary;
+
+    background: fill;
+    border-width: kind == BtnKind.ghost ? 0px : 1px;
+    border-color: stroke;
+    drop-shadow-blur: enabled && kind == BtnKind.primary ? (touch.pressed ? 6px : 16px) : 0px;
+    drop-shadow-color: Theme.colors.accent-primary.transparentize(0.55);
+    drop-shadow-offset-y: enabled && kind == BtnKind.primary && !touch.pressed ? 3px : 0px;
+    animate background, border-color, drop-shadow-blur, drop-shadow-offset-y { duration: 140ms; easing: ease-out; }
+
+    sheen := Rectangle {
+        x: 1px;
+        y: 1px;
+        width: parent.width - 2px;
+        height: parent.height * 0.48;
+        border-radius: Metrics.r-sm - 1px;
+        background: #ffffff.transparentize(kind == BtnKind.primary ? 0.82 : 0.94);
+        visible: enabled && kind != BtnKind.ghost;
+    }
+
+    content := HorizontalLayout {
+        width: 100%;
+        height: 100%;
+        padding-left: 14px;
+        padding-right: 14px;
+        spacing: has-icon ? 8px : 0px;
+        alignment: center;
+
+        VerticalLayout {
+            width: has-icon ? 16px : 0px;
+            alignment: center;
+            visible: has-icon;
+            Image {
+                source: root.icon;
+                width: 16px;
+                height: 16px;
+                colorize: fg;
+                image-fit: contain;
+            }
+        }
+
+        Text {
+            text: root.text;
+            color: fg;
+            font-size: 13px;
+            font-weight: 600;
+            vertical-alignment: center;
+        }
+    }
+
+    touch := TouchArea {
+        width: 100%;
+        height: 100%;
+        enabled: root.enabled;
+        clicked => { root.clicked(); }
+        mouse-cursor: pointer;
+    }
+}
+
+export component IconButton inherits Rectangle {
+    in property <image> icon;
+    in property <bool> enabled: true;
+    in property <bool> active: false;
+    callback clicked;
+
+    width: Metrics.control-h;
+    height: Metrics.control-h;
+    border-radius: Metrics.r-sm;
+    background: active ? Theme.colors.accent-muted
+        : touch.pressed ? Theme.colors.surface-active
+        : touch.has-hover ? Theme.colors.surface-hover
+        : transparent;
+    opacity: enabled ? 1 : 0.4;
+    animate background { duration: 110ms; }
+
+    Image {
+        source: icon;
+        width: 16px;
+        height: 16px;
+        colorize: active ? Theme.colors.accent-primary : Theme.colors.text-secondary;
+        image-fit: contain;
+        x: (parent.width - 16px) / 2;
+        y: (parent.height - 16px) / 2;
+    }
+
+    touch := TouchArea {
+        enabled: root.enabled;
+        clicked => { root.clicked(); }
+        mouse-cursor: pointer;
+    }
+}
+
+export component NavTab inherits Rectangle {
+    in property <string> text;
+    in property <bool> active: false;
+    callback clicked;
+
+    height: 32px;
+    border-radius: 8px;
+    background: active ? Theme.colors.accent-muted : (touch.has-hover ? Theme.colors.surface-hover : transparent);
+    animate background { duration: 110ms; }
+
+    HorizontalLayout {
+        padding-left: 14px;
+        padding-right: 14px;
+        Text {
+            text: root.text;
+            color: active ? Theme.colors.accent-primary : Theme.colors.text-secondary;
+            font-size: 13px;
+            font-weight: active ? 700 : 500;
+            vertical-alignment: center;
+        }
+    }
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+        mouse-cursor: pointer;
+    }
+}
+
+export component Pill inherits Rectangle {
+    in property <string> text;
+    in property <color> tone: Theme.colors.accent-primary;
+    in property <length> min-w: 0px;
+
+    height: 22px;
+    min-width: min-w;
+    border-radius: 11px;
+    background: tone.transparentize(0.86);
+    vertical-stretch: 0;
+    horizontal-stretch: 0;
+    clip: true;
+
+    HorizontalLayout {
+        width: 100%;
+        height: 100%;
+        padding-left: 10px;
+        padding-right: 10px;
+        alignment: center;
+
+        Text {
+            text: root.text;
+            color: tone;
+            font-size: 11px;
+            font-weight: 600;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+}
+
+export component QuietPill inherits Rectangle {
+    in property <string> text;
+    in property <bool> ok: false;
+
+    height: 22px;
+    vertical-stretch: 0;
+    horizontal-stretch: 0;
+    border-radius: 11px;
+    background: ok ? Theme.colors.status-pass.transparentize(0.84) : Theme.colors.surface-hover;
+    border-width: 1px;
+    border-color: ok ? Theme.colors.status-pass.transparentize(0.45) : Theme.colors.border-primary;
+
+    HorizontalLayout {
+        width: 100%;
+        height: 100%;
+        padding-left: 10px;
+        padding-right: 10px;
+        spacing: 6px;
+        alignment: center;
+
+        VerticalLayout {
+            width: 6px;
+            alignment: center;
+            horizontal-stretch: 0;
+            vertical-stretch: 0;
+            Rectangle {
+                width: 6px;
+                height: 6px;
+                border-radius: 3px;
+                background: ok ? Theme.colors.status-pass : Theme.colors.text-tertiary;
+            }
+        }
+        Text {
+            text: root.text;
+            color: ok ? Theme.colors.status-pass : Theme.colors.text-secondary;
+            font-size: 10px;
+            font-weight: 600;
+            vertical-alignment: center;
+        }
+    }
+}
+
+export component LegendChip inherits Rectangle {
+    in property <LegendItem> item;
+
+    border-radius: 8px;
+    background: Theme.colors.surface-secondary;
+    border-width: 1px;
+    border-color: Theme.colors.border-primary;
+    horizontal-stretch: 0;
+    vertical-stretch: 0;
+
+    HorizontalLayout {
+        padding-left: 8px;
+        padding-right: 10px;
+        padding-top: 5px;
+        padding-bottom: 5px;
+        spacing: 8px;
+        alignment: center;
+
+        VerticalLayout {
+            width: 8px;
+            alignment: center;
+            horizontal-stretch: 0;
+            vertical-stretch: 0;
+            Rectangle {
+                width: 8px;
+                height: 8px;
+                border-radius: 4px;
+                background: item.color;
+            }
+        }
+        Text {
+            text: "\{item.label}  (\{item.count})";
+            color: Theme.colors.text-secondary;
+            font-size: 12px;
+            vertical-alignment: center;
+            overflow: elide;
+        }
+    }
+}
+
+export component LegendBar inherits VerticalLayout {
+    in property <[LegendItem]> items;
+    in-out property <bool> expanded: false;
+
+    spacing: 8px;
+    width: 100%;
+    min-width: 0px;
+    vertical-stretch: 0;
+    horizontal-stretch: 1;
+
+    changed items => {
+        expanded = false;
+    }
+
+    header := Rectangle {
+        height: 32px;
+        border-radius: 8px;
+        background: header-touch.has-hover ? Theme.colors.surface-hover : Theme.colors.surface-secondary;
+        border-width: 1px;
+        border-color: Theme.colors.border-primary;
+        animate background { duration: 110ms; }
+
+        HorizontalLayout {
+            padding-left: 10px;
+            padding-right: 10px;
+            spacing: 8px;
+
+            Text {
+                text: "Labels  (\{root.items.length})";
+                color: Theme.colors.text-secondary;
+                font-size: 12px;
+                font-weight: 600;
+                vertical-alignment: center;
+            }
+            Rectangle { horizontal-stretch: 1; }
+            Text {
+                text: expanded ? "Hide" : "Show";
+                color: Theme.colors.text-tertiary;
+                font-size: 11px;
+                font-weight: 600;
+                vertical-alignment: center;
+            }
+            VerticalLayout {
+                width: 14px;
+                alignment: center;
+                horizontal-stretch: 0;
+                Image {
+                    source: @image-url("../assets/chevron-down.svg");
+                    width: 14px;
+                    height: 14px;
+                    colorize: Theme.colors.text-tertiary;
+                    image-fit: contain;
+                    transform-rotation: expanded ? 180deg : 0deg;
+                }
+            }
+        }
+
+        header-touch := TouchArea {
+            mouse-cursor: pointer;
+            clicked => { expanded = !expanded; }
+        }
+    }
+
+    if expanded: ScrollView {
+        width: 100%;
+        min-width: 0px;
+        height: min(140px, 32px * items.length);
+        vertical-stretch: 0;
+
+        VerticalLayout {
+            width: 100%;
+            spacing: 6px;
+            alignment: start;
+            for item in items: HorizontalLayout {
+                spacing: 0px;
+                LegendChip { item: item; }
+                Rectangle { horizontal-stretch: 1; }
+            }
+        }
+    }
+}
+
+export component StatCard inherits Rectangle {
+    in property <string> label;
+    in property <string> value;
+
+    background: Theme.colors.surface-primary;
+    border-radius: Metrics.r-md;
+    border-width: 1px;
+    border-color: Theme.colors.border-primary;
+    horizontal-stretch: 1;
+    min-height: 88px;
+
+    VerticalLayout {
+        padding-left: 18px;
+        padding-right: 18px;
+        padding-top: 16px;
+        padding-bottom: 16px;
+        spacing: 8px;
+        alignment: start;
+        Text {
+            text: label;
+            color: Theme.colors.text-secondary;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        Text {
+            text: value;
+            color: Theme.colors.text-primary;
+            font-size: 24px;
+            font-weight: 700;
+        }
+    }
+}
+
+export component SectionLabel inherits Text {
+    in property <string> caption;
+    text: caption;
+    color: Theme.colors.text-secondary;
+    font-size: 12px;
+    font-weight: 700;
+    vertical-stretch: 0;
+}
+
+export component FieldHint inherits Text {
+    in property <string> caption;
+    text: caption;
+    color: Theme.colors.text-tertiary;
+    font-size: 11px;
+    font-weight: 400;
+    wrap: word-wrap;
+}
+
+export component ToolbarLabel inherits Text {
+    in property <string> caption;
+    text: caption;
+    color: Theme.colors.text-tertiary;
+    font-size: 11px;
+    font-weight: 600;
+    vertical-alignment: center;
+}
+
+export component MetricTile inherits Rectangle {
+    in property <string> label;
+    in property <string> value;
+    horizontal-stretch: 1;
+    border-radius: 8px;
+    background: Theme.colors.surface-secondary;
+    border-width: 1px;
+    border-color: Theme.colors.border-primary;
+
+    VerticalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+        spacing: 4px;
+        Text {
+            text: label;
+            color: Theme.colors.text-secondary;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        Text {
+            text: value;
+            color: Theme.colors.text-primary;
+            font-size: 14px;
+            font-weight: 600;
+        }
+    }
+}
+
+export component EmptyState inherits VerticalLayout {
+    in property <string> title;
+    in property <string> body;
+    alignment: center;
+    spacing: 8px;
+    padding: 24px;
+    vertical-stretch: 0;
+    horizontal-stretch: 1;
+
+    Text {
+        text: title;
+        color: Theme.colors.text-primary;
+        font-size: 15px;
+        font-weight: 600;
+        horizontal-alignment: center;
+    }
+    Text {
+        text: body;
+        color: Theme.colors.text-secondary;
+        font-size: 13px;
+        horizontal-alignment: center;
+        wrap: word-wrap;
+    }
+}
+
+export component SeekBar inherits Rectangle {
+    in-out property <float> value: 0;
+    callback changed(float);
+    callback released(float);
+
+    min-height: 20px;
+    horizontal-stretch: 1;
+    vertical-stretch: 0;
+
+    track := Rectangle {
+        x: 0px;
+        y: (parent.height - self.height) / 2;
+        height: 6px;
+        width: 100%;
+        border-radius: 3px;
+        clip: true;
+        background: Theme.colors.background-tertiary;
+
+        Rectangle {
+            x: 0px;
+            y: 0px;
+            width: parent.width * min(1, max(0, root.value));
+            height: 100%;
+            border-radius: 3px;
+            background: Theme.colors.accent-primary;
+        }
+    }
+
+    thumb := Rectangle {
+        x: (parent.width - self.width) * min(1, max(0, root.value));
+        y: (parent.height - self.height) / 2;
+        width: 14px;
+        height: 14px;
+        border-radius: 7px;
+        background: Theme.colors.text-primary;
+        border-width: 2px;
+        border-color: Theme.colors.accent-primary;
+    }
+
+    touch := TouchArea {
+        pointer-event(event) => {
+            if event.kind == PointerEventKind.down {
+                root.value = min(1, max(0, touch.mouse-x / max(1px, root.width)));
+                root.changed(root.value);
+            }
+            if event.kind == PointerEventKind.up {
+                root.released(root.value);
+            }
+        }
+        moved => {
+            if self.pressed {
+                root.value = min(1, max(0, self.mouse-x / max(1px, root.width)));
+                root.changed(root.value);
+            }
+        }
+        mouse-cursor: pointer;
+    }
+}
+
+export component Banner inherits Rectangle {
+    in property <string> text;
+    in property <string> action-text;
+    callback action();
+
+    background: Theme.colors.accent-muted;
+    border-radius: Metrics.r-md;
+    border-width: 1px;
+    border-color: Theme.colors.accent-primary.transparentize(0.7);
+
+    HorizontalLayout {
+        padding-left: 14px;
+        padding-right: 10px;
+        padding-top: 8px;
+        padding-bottom: 8px;
+        spacing: 12px;
+        alignment: center;
+
+        Text {
+            text: root.text;
+            color: Theme.colors.text-secondary;
+            font-size: 13px;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+            wrap: word-wrap;
+        }
+
+        AppButton {
+            text: action-text;
+            kind: BtnKind.primary;
+            clicked => { root.action(); }
+        }
+    }
+}
+
+export component Panel inherits Rectangle {
+    background: Theme.colors.surface-primary;
+    border-radius: Metrics.r-lg;
+    border-width: 1px;
+    border-color: Theme.colors.border-primary;
+}
+
+component ZoomHudBtn inherits Rectangle {
+    in property <image> icon;
+    in property <bool> enabled: true;
+    callback clicked;
+
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    background: touch.has-hover && enabled ? Theme.colors.surface-hover : transparent;
+    opacity: enabled ? 1 : 0.35;
+    animate background { duration: 110ms; }
+
+    Image {
+        source: icon;
+        width: 14px;
+        height: 14px;
+        colorize: Theme.colors.text-secondary;
+        image-fit: contain;
+        x: (parent.width - 14px) / 2;
+        y: (parent.height - 14px) / 2;
+    }
+
+    touch := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+export component ZoomCanvas inherits Rectangle {
+    in property <image> source;
+    clip: true;
+
+    property <float> zoom: 1.0;
+    property <float> min-zoom: 1.0;
+    property <float> max-zoom: 8.0;
+    property <bool> menu-open: false;
+    property <length> drag-origin-x;
+    property <length> drag-origin-y;
+    property <length> pan-origin-x;
+    property <length> pan-origin-y;
+
+    property <length> nat-w: Math.max(1, source.width) * 1px;
+    property <length> nat-h: Math.max(1, source.height) * 1px;
+    property <float> fit: min(self.width / nat-w, self.height / nat-h);
+    property <length> draw-w: nat-w * fit * zoom;
+    property <length> draw-h: nat-h * fit * zoom;
+
+    changed source => {
+        reset-view();
+        menu-open = false;
+    }
+
+    function reset-view() {
+        zoom = 1.0;
+        flick.viewport-x = 0px;
+        flick.viewport-y = 0px;
+    }
+
+    function clamp-pan(next-x: length, next-y: length, content-w: length, content-h: length) {
+        let limit-x = min(0px, flick.width - content-w);
+        let limit-y = min(0px, flick.height - content-h);
+        flick.viewport-x = min(0px, max(limit-x, next-x));
+        flick.viewport-y = min(0px, max(limit-y, next-y));
+    }
+
+    function zoom-at(factor: float, ax: length, ay: length) {
+        let old-z = zoom;
+        let new-z = max(min-zoom, min(max-zoom, old-z * factor));
+        if Math.abs(new-z - old-z) < 0.001 {
+            return;
+        }
+        let old-w = nat-w * fit * old-z;
+        let old-h = nat-h * fit * old-z;
+        let old-ox = max(0px, (flick.width - old-w) / 2);
+        let old-oy = max(0px, (flick.height - old-h) / 2);
+        let ix = ax - flick.viewport-x - old-ox;
+        let iy = ay - flick.viewport-y - old-oy;
+        let rx = old-w <= 0px ? 0.5 : ix / old-w;
+        let ry = old-h <= 0px ? 0.5 : iy / old-h;
+        zoom = new-z;
+        let new-w = nat-w * fit * new-z;
+        let new-h = nat-h * fit * new-z;
+        let new-ox = max(0px, (flick.width - new-w) / 2);
+        let new-oy = max(0px, (flick.height - new-h) / 2);
+        let cw = max(flick.width, new-w);
+        let ch = max(flick.height, new-h);
+        clamp-pan(ax - new-ox - rx * new-w, ay - new-oy - ry * new-h, cw, ch);
+    }
+
+    flick := Flickable {
+        width: 100%;
+        height: 100%;
+        interactive: false;
+        viewport-width: max(self.width, draw-w);
+        viewport-height: max(self.height, draw-h);
+
+        Image {
+            x: max(0px, (flick.width - draw-w) / 2);
+            y: max(0px, (flick.height - draw-h) / 2);
+            width: draw-w;
+            height: draw-h;
+            source: root.source;
+            image-fit: fill;
+        }
+    }
+
+    ta := TouchArea {
+        width: 100%;
+        height: 100%;
+        mouse-cursor: zoom > 1.02 ? (self.pressed ? MouseCursor.grabbing : MouseCursor.grab) : MouseCursor.default;
+
+        scroll-event(event) => {
+            let factor = event.delta-y > 0 ? 1.12 : 0.893;
+            zoom-at(factor, self.mouse-x, self.mouse-y);
+            accept
+        }
+
+        pointer-event(event) => {
+            if event.kind == PointerEventKind.down {
+                drag-origin-x = self.mouse-x;
+                drag-origin-y = self.mouse-y;
+                pan-origin-x = flick.viewport-x;
+                pan-origin-y = flick.viewport-y;
+            }
+        }
+
+        moved => {
+            if self.pressed && zoom > 1.02 {
+                clamp-pan(
+                    pan-origin-x + (self.mouse-x - drag-origin-x),
+                    pan-origin-y + (self.mouse-y - drag-origin-y),
+                    max(flick.width, draw-w),
+                    max(flick.height, draw-h),
+                );
+            }
+        }
+
+        double-clicked => {
+            if zoom > 1.05 {
+                reset-view();
+            } else {
+                zoom-at(2.0 / zoom, self.mouse-x, self.mouse-y);
+            }
+        }
+    }
+
+    hud := Rectangle {
+        x: parent.width - self.width - 8px;
+        y: parent.height - self.height - 8px;
+        width: menu-open ? 158px : 32px;
+        height: 32px;
+        border-radius: 8px;
+        background: Theme.colors.surface-primary.transparentize(0.12);
+        border-width: 1px;
+        border-color: Theme.colors.border-primary;
+        drop-shadow-blur: 12px;
+        drop-shadow-color: #000000.transparentize(0.72);
+
+        HorizontalLayout {
+            width: 100%;
+            height: 100%;
+            padding-left: 3px;
+            padding-right: 3px;
+            spacing: 2px;
+            alignment: center;
+
+            if menu-open: HorizontalLayout {
+                spacing: 2px;
+                alignment: center;
+                ZoomHudBtn {
+                    icon: @image-url("../assets/zoom-out.svg");
+                    enabled: zoom > min-zoom + 0.01;
+                    clicked => { zoom-at(0.8, flick.width / 2, flick.height / 2); }
+                }
+                Text {
+                    text: "\{Math.round(zoom * 100)}%";
+                    color: Theme.colors.text-secondary;
+                    font-size: 11px;
+                    font-weight: 600;
+                    vertical-alignment: center;
+                    min-width: 36px;
+                    horizontal-alignment: center;
+                }
+                ZoomHudBtn {
+                    icon: @image-url("../assets/zoom-in.svg");
+                    enabled: zoom < max-zoom - 0.01;
+                    clicked => { zoom-at(1.25, flick.width / 2, flick.height / 2); }
+                }
+                ZoomHudBtn {
+                    icon: @image-url("../assets/zoom-fit.svg");
+                    enabled: zoom > 1.02;
+                    clicked => { reset-view(); }
+                }
+                Rectangle {
+                    width: 1px;
+                    height: 14px;
+                    background: Theme.colors.border-primary;
+                    vertical-stretch: 0;
+                }
+            }
+
+            ZoomHudBtn {
+                icon: menu-open ? @image-url("../assets/x.svg") : @image-url("../assets/zoom-in.svg");
+                clicked => { menu-open = !menu-open; }
+            }
+        }
+    }
+}

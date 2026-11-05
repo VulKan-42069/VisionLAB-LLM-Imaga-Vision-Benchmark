@@ -1,0 +1,149 @@
+import { Theme, Metrics } from "theme.slint";
+import { Api } from "api.slint";
+import { AppButton, Pill, ZoomCanvas, BtnKind, SectionLabel, EmptyState } from "widgets.slint";
+
+export component CompareView inherits Rectangle {
+    background: transparent;
+
+    VerticalLayout {
+        padding: 16px;
+        spacing: 10px;
+
+        HorizontalLayout {
+            spacing: 10px;
+            SectionLabel { caption: "Side by side"; }
+            if Api.media-label != "": Text {
+                text: Api.media-label;
+                color: Theme.colors.text-secondary;
+                font-size: 13px;
+                vertical-alignment: center;
+                overflow: elide;
+                horizontal-stretch: 1;
+            }
+            if Api.media-label == "": Rectangle { horizontal-stretch: 1; }
+            if Api.has-result: Pill { text: "Overlay ready"; tone: Theme.colors.status-pass; }
+            if Api.has-media && !Api.has-result: Pill { text: "No overlay yet"; tone: Theme.colors.status-warning; }
+        }
+
+        if !Api.has-media: Rectangle {
+            background: Theme.colors.surface-primary;
+            border-radius: Metrics.r-lg;
+            border-width: 1px;
+            border-color: Theme.colors.border-primary;
+            vertical-stretch: 1;
+
+            VerticalLayout {
+                width: 100%;
+                height: 100%;
+                alignment: center;
+                spacing: 14px;
+                EmptyState {
+                    title: "Nothing to compare";
+                    body: "Open an image or video in Studio, run a test, then come back here to view the original beside the annotated overlay.";
+                }
+                HorizontalLayout {
+                    alignment: center;
+                    AppButton {
+                        text: "Go to Studio";
+                        kind: BtnKind.primary;
+                        clicked => { Api.goto-screen(1); }
+                    }
+                }
+            }
+        }
+
+        if Api.has-media: HorizontalLayout {
+            spacing: 12px;
+            vertical-stretch: 1;
+
+            Rectangle {
+                background: Theme.colors.surface-primary;
+                border-radius: Metrics.r-lg;
+                border-width: 1px;
+                border-color: Theme.colors.border-primary;
+                horizontal-stretch: 1;
+                min-width: 0px;
+
+                VerticalLayout {
+                    padding: 16px;
+                    spacing: 12px;
+
+                    SectionLabel { caption: "Original"; }
+
+                    Rectangle {
+                        background: Theme.colors.background-secondary;
+                        border-radius: Metrics.r-md;
+                        border-width: 1px;
+                        border-color: Theme.colors.border-primary;
+                        vertical-stretch: 1;
+                        min-width: 0px;
+                        clip: true;
+
+                        ZoomCanvas {
+                            source: Api.original-image;
+                            width: 100%;
+                            height: 100%;
+                        }
+                    }
+                }
+            }
+
+            Rectangle {
+                background: Theme.colors.surface-primary;
+                border-radius: Metrics.r-lg;
+                border-width: 1px;
+                border-color: Theme.colors.border-primary;
+                horizontal-stretch: 1;
+                min-width: 0px;
+
+                VerticalLayout {
+                    padding: 16px;
+                    spacing: 12px;
+
+                    SectionLabel { caption: "Annotated"; }
+
+                    Rectangle {
+                        background: Theme.colors.background-secondary;
+                        border-radius: Metrics.r-md;
+                        border-width: 1px;
+                        border-color: Theme.colors.border-primary;
+                        vertical-stretch: 1;
+                        min-width: 0px;
+                        clip: true;
+
+                        if !Api.has-result: VerticalLayout {
+                            width: 100%;
+                            height: 100%;
+                            alignment: center;
+                            spacing: 14px;
+                            EmptyState {
+                                title: "No overlay yet";
+                                body: "Run a vision test in Studio. The annotated image will appear here next to the original.";
+                            }
+                            HorizontalLayout {
+                                alignment: center;
+                                AppButton {
+                                    text: "Go to Studio";
+                                    kind: BtnKind.primary;
+                                    clicked => { Api.goto-screen(1); }
+                                }
+                            }
+                        }
+
+                        if Api.has-result: ZoomCanvas {
+                            source: Api.canvas-image;
+                            width: 100%;
+                            height: 100%;
+                        }
+                    }
+                }
+            }
+        }
+
+        if Api.media-meta != "": Text {
+            text: Api.media-meta;
+            color: Theme.colors.text-secondary;
+            font-size: 12px;
+        }
+    }
+}

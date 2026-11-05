@@ -1,0 +1,142 @@
+import { Theme, Metrics } from "theme.slint";
+import { Api, ScoreboardRow } from "api.slint";
+import { AppButton, StatCard, BtnKind, Pill, EmptyState } from "widgets.slint";
+import { ComboBox, LineEdit, ScrollView } from "std-widgets.slint";
+
+component TableHeader inherits Rectangle {
+    height: 40px;
+    background: Theme.colors.surface-secondary;
+    HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 16px;
+        spacing: 8px;
+        Text { text: "Time"; color: Theme.colors.text-primary; font-size: 12px; font-weight: 600; width: 140px; vertical-alignment: center; }
+        Text { text: "Provider / Model"; color: Theme.colors.text-primary; font-size: 12px; font-weight: 600; horizontal-stretch: 1.4; vertical-alignment: center; }
+        Text { text: "Task"; color: Theme.colors.text-primary; font-size: 12px; font-weight: 600; width: 150px; vertical-alignment: center; }
+        Text { text: "Media"; color: Theme.colors.text-primary; font-size: 12px; font-weight: 600; horizontal-stretch: 1; vertical-alignment: center; }
+        Text { text: "Latency"; color: Theme.colors.text-primary; font-size: 12px; font-weight: 600; width: 80px; vertical-alignment: center; }
+        Text { text: "Cost"; color: Theme.colors.text-primary; font-size: 12px; font-weight: 600; width: 80px; vertical-alignment: center; }
+        Text { text: "Verdict"; color: Theme.colors.text-primary; font-size: 12px; font-weight: 600; width: 90px; vertical-alignment: center; }
+    }
+}
+
+component TableRow inherits Rectangle {
+    in property <ScoreboardRow> entry;
+    in property <int> index;
+    callback clicked;
+    height: 48px;
+    background: touch.has-hover ? Theme.colors.surface-hover : (mod(index, 2) == 0 ? transparent : Theme.colors.background-secondary);
+
+    HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 16px;
+        spacing: 8px;
+        Text { text: entry.time; color: Theme.colors.text-secondary; font-size: 13px; width: 140px; vertical-alignment: center; overflow: elide; }
+        Text { text: entry.provider + "  /  " + entry.model; color: Theme.colors.text-primary; font-size: 13px; horizontal-stretch: 1.4; vertical-alignment: center; overflow: elide; }
+        Text { text: entry.task; color: Theme.colors.text-secondary; font-size: 13px; width: 150px; vertical-alignment: center; overflow: elide; }
+        Text { text: entry.media; color: Theme.colors.text-secondary; font-size: 13px; horizontal-stretch: 1; vertical-alignment: center; overflow: elide; }
+        Text { text: entry.latency; color: Theme.colors.text-secondary; font-size: 13px; width: 80px; vertical-alignment: center; }
+        Text { text: entry.cost; color: Theme.colors.text-secondary; font-size: 13px; width: 80px; vertical-alignment: center; }
+        VerticalLayout {
+            width: 90px;
+            alignment: center;
+            if entry.verdict == "pass": Pill { text: "PASS"; tone: Theme.colors.status-pass; }
+            if entry.verdict == "fail": Pill { text: "FAIL"; tone: Theme.colors.status-fail; }
+            if entry.verdict != "pass" && entry.verdict != "fail": Pill { text: "PENDING"; tone: Theme.colors.status-warning; }
+        }
+    }
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+        mouse-cursor: pointer;
+    }
+}
+
+export component ScoreboardView inherits Rectangle {
+    background: transparent;
+
+    VerticalLayout {
+        padding: 16px;
+        spacing: 16px;
+
+        HorizontalLayout {
+            spacing: 12px;
+            StatCard { label: "Total runs"; value: "\{Api.stat-runs}"; }
+            StatCard { label: "Pass rate"; value: Api.stat-pass-rate; }
+            StatCard { label: "Avg latency"; value: Api.stat-avg-latency; }
+            StatCard { label: "Est. cost"; value: Api.stat-total-cost; }
+        }
+
+        HorizontalLayout {
+            spacing: 8px;
+            LineEdit {
+                placeholder-text: "Filter by model, provider, or notes";
+                text <=> Api.scoreboard-filter;
+                edited(t) => { Api.scoreboard-filter-changed(t); }
+                horizontal-stretch: 1;
+            }
+            ComboBox {
+                width: 200px;
+                model: ["All tasks", "Classification", "Object detection", "Instance segmentation", "Keypoint detection", "OCR"];
+                current-index <=> Api.scoreboard-task-filter;
+                selected(v) => { Api.scoreboard-task-filter-changed(self.current-index); }
+            }
+            AppButton {
+                text: "Export CSV";
+                clicked => { Api.scoreboard-export-csv(); }
+            }
+            AppButton {
+                text: "Export JSON";
+                clicked => { Api.scoreboard-export-json(); }
+            }
+            AppButton {
+                text: "Clear";
+                kind: BtnKind.danger;
+                icon: @image-url("../assets/trash.svg");
+                clicked => { Api.scoreboard-clear(); }
+            }
+        }
+
+        Rectangle {
+            background: Theme.colors.surface-primary;
+            border-radius: Metrics.r-lg;
+            border-width: 1px;
+            border-color: Theme.colors.border-primary;
+            vertical-stretch: 1;
+            clip: true;
+
+            VerticalLayout {
+                TableHeader {}
+                Rectangle { height: 1px; background: Theme.colors.border-primary; }
+                if Api.scoreboard-rows.length == 0: VerticalLayout {
+                    vertical-stretch: 1;
+                    alignment: center;
+                    spacing: 14px;
+                    EmptyState {
+                        title: "No runs yet";
+                        body: "Grade a result in Test Studio to populate the scoreboard.";
+                    }
+                    HorizontalLayout {
+                        alignment: center;
+                        AppButton {
+                            text: "Go to Studio";
+                            kind: BtnKind.primary;
+                            clicked => { Api.goto-screen(1); }
+                        }
+                    }
+                }
+                if Api.scoreboard-rows.length > 0: ScrollView {
+                    vertical-stretch: 1;
+                    VerticalLayout {
+                        alignment: start;
+                        for row[i] in Api.scoreboard-rows: TableRow {
+                            entry: row;
+                            index: i;
+                            clicked => { Api.scoreboard-open-row(i); }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
